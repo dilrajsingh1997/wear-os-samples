@@ -25,7 +25,7 @@ private const val HOUR_HAND_WIDTH_FRACTION = 0.02336f
 // Because the minute length is something the user can edit, we make it publicly
 // accessible as a default. We also specify the minimum and maximum values for the user
 // settings as well.
-const val MINUTE_HAND_LENGTH_FRACTION_DEFAULT = 0.3783f
+const val MINUTE_HAND_LENGTH_FRACTION_DEFAULT = 0.4f//3783f
 const val MINUTE_HAND_LENGTH_FRACTION_MINIMUM = 0.10000f
 const val MINUTE_HAND_LENGTH_FRACTION_MAXIMUM = 0.40000f
 private const val MINUTE_HAND_WIDTH_FRACTION = 0.0163f
@@ -46,6 +46,8 @@ private const val GAP_BETWEEN_HAND_AND_CENTER_FRACTION =
     0.01869f + CENTER_CIRCLE_DIAMETER_FRACTION / 2.0f
 
 private const val NUMBER_RADIUS_FRACTION = 0.45f
+
+private const val BATTERY_SWEEP_ANGLE = 90f
 
 /**
  * Represents all data needed to render an analog watch face.
@@ -78,5 +80,6 @@ data class WatchFaceData(
     val numberStyleOuterCircleRadiusFraction: Float = NUMBER_STYLE_OUTER_CIRCLE_RADIUS_FRACTION,
     val gapBetweenOuterCircleAndBorderFraction: Float =
         GAP_BETWEEN_OUTER_CIRCLE_AND_BORDER_FRACTION,
-    val gapBetweenHandAndCenterFraction: Float = GAP_BETWEEN_HAND_AND_CENTER_FRACTION
+    val gapBetweenHandAndCenterFraction: Float = GAP_BETWEEN_HAND_AND_CENTER_FRACTION,
+    val batterySweepAngle: Float = BATTERY_SWEEP_ANGLE,
 )

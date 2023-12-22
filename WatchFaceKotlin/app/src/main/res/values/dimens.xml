@@ -19,6 +19,10 @@
     <dimen name="hour_mark_size">10sp</dimen>
     <dimen name="clock_hand_stroke_width">2dp</dimen>
 
+    <dimen name="heart_rate_top_margin">16dp</dimen>
+    <dimen name="date_right_margin">16dp</dimen>
+    <dimen name="battery_radius">42dp</dimen>
+
     <!-- Values for WatchFaceConfigActivity -->
     <dimen name="activity_config_padding">6dp</dimen>
     <dimen name="activity_config_spacer_height_post_content">60dp</dimen>
