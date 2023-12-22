@@ -16,6 +16,7 @@
 package com.example.android.wearable.alpha.utils
 
 import android.content.Context
+import android.graphics.Color
 import android.graphics.RectF
 import androidx.wear.watchface.CanvasComplicationFactory
 import androidx.wear.watchface.ComplicationSlot
@@ -33,11 +34,14 @@ import com.example.android.wearable.alpha.R
 // Creates bounds for the locations of both right and left complications. (This is the
 // location from 0.0 - 1.0.)
 // Both left and right complications use the same top and bottom bounds.
-private const val LEFT_AND_RIGHT_COMPLICATIONS_TOP_BOUND = 0.4f
-private const val LEFT_AND_RIGHT_COMPLICATIONS_BOTTOM_BOUND = 0.6f
+private const val RIGHT_COMPLICATIONS_TOP_BOUND = 0.4f
+private const val RIGHT_COMPLICATIONS_BOTTOM_BOUND = 0.6f
 
-private const val LEFT_COMPLICATION_LEFT_BOUND = 0.2f
-private const val LEFT_COMPLICATION_RIGHT_BOUND = 0.4f
+private const val LEFT_COMPLICATIONS_TOP_BOUND = 0.396f
+private const val LEFT_COMPLICATIONS_BOTTOM_BOUND = 0.556f
+
+private const val LEFT_COMPLICATION_LEFT_BOUND = 0.1f
+private const val LEFT_COMPLICATION_RIGHT_BOUND = 0.3f
 
 private const val RIGHT_COMPLICATION_LEFT_BOUND = 0.6f
 private const val RIGHT_COMPLICATION_RIGHT_BOUND = 0.8f
@@ -100,9 +104,9 @@ fun createComplicationSlotManager(
         bounds = ComplicationSlotBounds(
             RectF(
                 LEFT_COMPLICATION_LEFT_BOUND,
-                LEFT_AND_RIGHT_COMPLICATIONS_TOP_BOUND,
+                LEFT_COMPLICATIONS_TOP_BOUND,
                 LEFT_COMPLICATION_RIGHT_BOUND,
-                LEFT_AND_RIGHT_COMPLICATIONS_BOTTOM_BOUND
+                LEFT_COMPLICATIONS_BOTTOM_BOUND
             )
         )
     )
@@ -119,9 +123,9 @@ fun createComplicationSlotManager(
         bounds = ComplicationSlotBounds(
             RectF(
                 RIGHT_COMPLICATION_LEFT_BOUND,
-                LEFT_AND_RIGHT_COMPLICATIONS_TOP_BOUND,
+                RIGHT_COMPLICATIONS_TOP_BOUND,
                 RIGHT_COMPLICATION_RIGHT_BOUND,
-                LEFT_AND_RIGHT_COMPLICATIONS_BOTTOM_BOUND
+                RIGHT_COMPLICATIONS_BOTTOM_BOUND
             )
         )
     ).build()

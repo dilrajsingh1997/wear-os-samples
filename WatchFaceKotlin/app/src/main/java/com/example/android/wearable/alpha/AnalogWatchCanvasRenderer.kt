@@ -15,19 +15,31 @@
  */
 package com.example.android.wearable.alpha
 
+import android.animation.ValueAnimator
 import android.content.Context
+import android.content.Context.BATTERY_SERVICE
 import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.CornerPathEffect
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
-import android.util.Log
+import android.os.BatteryManager
+import android.provider.CalendarContract
 import android.view.SurfaceHolder
 import androidx.core.graphics.withRotation
 import androidx.core.graphics.withScale
+import androidx.health.services.client.HealthServices
+import androidx.health.services.client.PassiveListenerCallback
+import androidx.health.services.client.PassiveMonitoringClient
+import androidx.health.services.client.data.DataPointContainer
+import androidx.health.services.client.data.DataType
+import androidx.health.services.client.data.PassiveListenerConfig
 import androidx.wear.watchface.ComplicationSlotsManager
 import androidx.wear.watchface.DrawMode
 import androidx.wear.watchface.Renderer
 import androidx.wear.watchface.WatchState
+import androidx.wear.watchface.complications.data.ShortTextComplicationData
 import androidx.wear.watchface.complications.rendering.CanvasComplicationDrawable
 import androidx.wear.watchface.complications.rendering.ComplicationDrawable
 import androidx.wear.watchface.style.CurrentUserStyleRepository
@@ -39,9 +51,11 @@ import com.example.android.wearable.alpha.data.watchface.WatchFaceColorPalette.C
 import com.example.android.wearable.alpha.data.watchface.WatchFaceData
 import com.example.android.wearable.alpha.utils.COLOR_STYLE_SETTING
 import com.example.android.wearable.alpha.utils.DRAW_HOUR_PIPS_STYLE_SETTING
+import com.example.android.wearable.alpha.utils.Logger
 import com.example.android.wearable.alpha.utils.WATCH_HAND_LENGTH_STYLE_SETTING
 import java.time.Duration
 import java.time.ZonedDateTime
+import java.util.Calendar
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlinx.coroutines.CoroutineScope
@@ -49,6 +63,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+
 
 // Default for how long each frame is displayed at expected frame rate.
 private const val FRAME_PERIOD_MS_DEFAULT: Long = 16L
@@ -77,8 +92,58 @@ class AnalogWatchCanvasRenderer(
         }
     }
 
+    val x = ValueAnimator()
+
     private val scope: CoroutineScope =
         CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    private var heartRate = 0.0
+
+    private val complicationDrawable by lazy {
+        ComplicationDrawable(context).apply {
+            activeStyle.run {
+                backgroundColor = Color.CYAN
+                textColor = Color.RED
+                titleColor = Color.GREEN
+                textSize = 100
+            }
+        }
+    }
+
+    private val passiveListenerConfig = PassiveListenerConfig.builder()
+        .setDataTypes(setOf(DataType.HEART_RATE_BPM))
+//        .setHealthEventTypes(setOf(HealthEvent.Type.FALL_DETECTED))
+        .build()
+
+    private val passiveListenerCallback: PassiveListenerCallback =
+        object : PassiveListenerCallback {
+            override fun onNewDataPointsReceived(dataPoints: DataPointContainer) {
+                Logger.d("debugdilrajhr", "data received passive callback " +
+                    dataPoints.intervalDataPoints.joinToString { it.value.toString() } +
+                    " " +
+                    dataPoints.getData(DataType.HEART_RATE_BPM)
+                        .joinToString { it.value.toString() })
+                runCatching {
+                    heartRate = dataPoints
+                        .getData(DataType.HEART_RATE_BPM)
+                        .last()
+                        .value
+                        .takeIf { it > 0 }
+                        ?: heartRate
+                }
+            }
+        }
+
+    private var passiveMonitoringClient: PassiveMonitoringClient
+
+    init {
+        val healthClient = HealthServices.getClient(context)
+        passiveMonitoringClient = healthClient.passiveMonitoringClient
+        passiveMonitoringClient.setPassiveListenerCallback(
+            passiveListenerConfig,
+            passiveListenerCallback
+        )
+    }
 
     // Represents all data needed to render the watch face. All value defaults are constants. Only
     // three values are changeable by the user (color scheme, ticks being rendered, and length of
@@ -93,12 +158,39 @@ class AnalogWatchCanvasRenderer(
         watchFaceData.ambientColorStyle
     )
 
+    private var shouldFetchBattery = true
+    private var batteryLevel = 0f
+
     // Initializes paint object for painting the clock hands with default values.
     private val clockHandPaint = Paint().apply {
         isAntiAlias = true
         strokeWidth =
             context.resources.getDimensionPixelSize(R.dimen.clock_hand_stroke_width).toFloat()
     }
+
+//    private val batteryStatus: Intent? = IntentFilter(Intent.ACTION_BATTERY_CHANGED).let { intentFilter ->
+//        context.registerReceiver(null, intentFilter)
+//    }
+
+    private val heartRateTopMargin by lazy {
+        context.resources.getDimensionPixelSize(R.dimen.heart_rate_top_margin).toFloat()
+    }
+
+    private val batteryRadius by lazy {
+        context.resources.getDimensionPixelSize(R.dimen.battery_radius).toFloat()
+    }
+
+    private val dateRightMargin by lazy {
+        context.resources.getDimensionPixelSize(R.dimen.date_right_margin).toFloat()
+    }
+
+    private val customDataElements = Paint()
+        .apply {
+            isAntiAlias = true
+            textSize = context.resources.getDimensionPixelSize(R.dimen.hour_mark_size).toFloat()
+            color = Color.WHITE
+            style = Paint.Style.FILL
+        }
 
     private val outerElementPaint = Paint().apply {
         isAntiAlias = true
@@ -141,7 +233,7 @@ class AnalogWatchCanvasRenderer(
      * function is called by a flow.
      */
     private fun updateWatchFaceData(userStyle: UserStyle) {
-        Log.d(TAG, "updateWatchFace(): $userStyle")
+        Logger.d(TAG, "updateWatchFace(): $userStyle")
 
         var newWatchFaceData: WatchFaceData = watchFaceData
 
@@ -158,6 +250,7 @@ class AnalogWatchCanvasRenderer(
                         )
                     )
                 }
+
                 DRAW_HOUR_PIPS_STYLE_SETTING -> {
                     val booleanValue = options.value as
                         UserStyleSetting.BooleanUserStyleSetting.BooleanOption
@@ -166,6 +259,7 @@ class AnalogWatchCanvasRenderer(
                         drawHourPips = booleanValue.value
                     )
                 }
+
                 WATCH_HAND_LENGTH_STYLE_SETTING -> {
                     val doubleValue = options.value as
                         UserStyleSetting.DoubleRangeUserStyleSetting.DoubleRangeOption
@@ -213,8 +307,9 @@ class AnalogWatchCanvasRenderer(
     }
 
     override fun onDestroy() {
-        Log.d(TAG, "onDestroy()")
+        Logger.d(TAG, "onDestroy()")
         scope.cancel("AnalogWatchCanvasRenderer scope clear() request")
+        passiveMonitoringClient.clearPassiveListenerCallbackAsync()
         super.onDestroy()
     }
 
@@ -252,28 +347,144 @@ class AnalogWatchCanvasRenderer(
 
         if (renderParameters.watchFaceLayers.contains(WatchFaceLayer.COMPLICATIONS_OVERLAY)) {
             drawClockHands(canvas, bounds, zonedDateTime)
+            drawHeartRate(canvas, bounds, zonedDateTime)
+            drawDate(canvas, bounds, zonedDateTime)
         }
 
-        if (renderParameters.drawMode == DrawMode.INTERACTIVE &&
-            renderParameters.watchFaceLayers.contains(WatchFaceLayer.BASE) &&
-            watchFaceData.drawHourPips
+        if (renderParameters.drawMode != DrawMode.AMBIENT &&
+            renderParameters.watchFaceLayers.contains(WatchFaceLayer.BASE)
         ) {
-            drawNumberStyleOuterElement(
-                canvas,
-                bounds,
-                watchFaceData.numberRadiusFraction,
-                watchFaceData.numberStyleOuterCircleRadiusFraction,
-                watchFaceColors.activeOuterElementColor,
-                watchFaceData.numberStyleOuterCircleRadiusFraction,
-                watchFaceData.gapBetweenOuterCircleAndBorderFraction
+            drawBattery(canvas, bounds)
+
+            if (watchFaceData.drawHourPips) {
+                drawNumberStyleOuterElement(
+                    canvas,
+                    bounds,
+                    watchFaceData.numberRadiusFraction,
+                    watchFaceData.numberStyleOuterCircleRadiusFraction,
+                    watchFaceColors.activeOuterElementColor,
+                    watchFaceData.numberStyleOuterCircleRadiusFraction,
+                    watchFaceData.gapBetweenOuterCircleAndBorderFraction
+                )
+            }
+        } else {
+            shouldFetchBattery = true
+        }
+    }
+
+    private fun drawBattery(canvas: Canvas, bounds: Rect) {
+        if (shouldFetchBattery) {
+            shouldFetchBattery = false
+            val batteryManager = context.getSystemService(BATTERY_SERVICE) as BatteryManager
+            val batLevel = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+            batteryLevel = batLevel / 100f
+            Logger.d("debugdilraj", "batteryLevel = $batteryLevel")
+
+        }
+
+        canvas.drawArc(
+            /* left = */ bounds.exactCenterX() - batteryRadius,
+            /* top = */ bounds.exactCenterY() - batteryRadius,
+            /* right = */ bounds.exactCenterX() + batteryRadius,
+            /* bottom = */ bounds.exactCenterY() + batteryRadius,
+            /* startAngle = */ 45f,
+            /* sweepAngle = */ watchFaceData.batterySweepAngle,
+            /* useCenter = */ false,
+            /* paint = */ clockHandPaint.apply {
+                style = Paint.Style.STROKE
+                color = watchFaceColors.activeSecondaryColor
+                strokeJoin = Paint.Join.ROUND
+                strokeCap = Paint.Cap.ROUND
+                pathEffect = CornerPathEffect(50f)
+            }
+        )
+
+        canvas.drawArc(
+            /* left = */ bounds.exactCenterX() - batteryRadius,
+            /* top = */ bounds.exactCenterY() - batteryRadius,
+            /* right = */ bounds.exactCenterX() + batteryRadius,
+            /* bottom = */ bounds.exactCenterY() + batteryRadius,
+            /* startAngle = */ 135f,
+            /* sweepAngle = */ -watchFaceData.batterySweepAngle * batteryLevel,
+            /* useCenter = */ false,
+            /* paint = */ clockHandPaint.apply {
+                style = Paint.Style.STROKE
+                color = watchFaceColors.activePrimaryColor
+                strokeJoin = Paint.Join.ROUND
+                strokeCap = Paint.Cap.ROUND
+                pathEffect = CornerPathEffect(50f)
+            }
+        )
+    }
+
+    private fun drawDate(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime) {
+        val date = zonedDateTime.dayOfMonth.toString()
+
+        val rect = Rect()
+        customDataElements.getTextBounds(date, 0, date.length, rect)
+
+        val x = bounds.exactCenterX() + canvas.width / 2f - dateRightMargin
+        val y = canvas.height / 2f + rect.height() / 2f - rect.bottom
+
+        customDataElements.color = if (renderParameters.drawMode == DrawMode.AMBIENT) {
+            watchFaceColors.ambientSecondaryColor
+        } else {
+            watchFaceColors.activePrimaryColor
+        }
+
+        canvas.withRotation(-30f, bounds.exactCenterX(), bounds.exactCenterY()) {
+            canvas.drawText(
+                date,
+                x,
+                y,
+                customDataElements,
             )
         }
+    }
+
+    private fun drawHeartRate(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime) {
+        val hr = heartRate.toInt().toString()
+
+        val rect = Rect()
+        customDataElements.getTextBounds(hr, 0, hr.length, rect)
+
+        val x = canvas.width / 2f - rect.width() / 2f - rect.left
+        customDataElements.color = if (renderParameters.drawMode == DrawMode.AMBIENT) {
+            watchFaceColors.ambientSecondaryColor
+        } else {
+            watchFaceColors.activePrimaryColor
+        }
+
+        canvas.drawText(
+            hr,
+            x,
+            heartRateTopMargin,
+            customDataElements,
+        )
     }
 
     // ----- All drawing functions -----
     private fun drawComplications(canvas: Canvas, zonedDateTime: ZonedDateTime) {
         for ((_, complication) in complicationSlotsManager.complicationSlots) {
             if (complication.enabled) {
+
+                ComplicationDrawable(context).apply {
+                    activeStyle.run {
+                        backgroundColor = watchFaceColors.activeBackgroundColor
+                        textColor = watchFaceColors.activeSecondaryColor
+                        textSize = 100
+                        iconColor = Color.TRANSPARENT
+                    }
+                    ambientStyle.run {
+                        backgroundColor = Color.TRANSPARENT
+                        textColor = Color.TRANSPARENT
+                        textSize = 0
+                        iconColor = Color.TRANSPARENT
+                    }
+                    (complication.renderer as CanvasComplicationDrawable).drawable = this
+                }
+
+
                 complication.render(canvas, zonedDateTime, renderParameters)
             }
         }
@@ -310,8 +521,9 @@ class AnalogWatchCanvasRenderer(
         // of the secondOfDay modulo the hand interval
         val hourRotation = secondOfDay.rem(secondsPerHourHandRotation) * 360.0f /
             secondsPerHourHandRotation
-        val minuteRotation = secondOfDay.rem(secondsPerMinuteHandRotation) * 360.0f /
-            secondsPerMinuteHandRotation
+//        val minuteRotation = secondOfDay.rem(secondsPerMinuteHandRotation) * 360.0f /
+//            secondsPerMinuteHandRotation
+        val minuteRotation = zonedDateTime.minute / 60f * 360f
 
         canvas.withScale(
             x = WATCH_HAND_SCALE,
@@ -321,12 +533,15 @@ class AnalogWatchCanvasRenderer(
         ) {
             val drawAmbient = renderParameters.drawMode == DrawMode.AMBIENT
 
-            clockHandPaint.style = if (drawAmbient) Paint.Style.STROKE else Paint.Style.FILL
+            clockHandPaint.style =
+                if (drawAmbient) Paint.Style.STROKE else Paint.Style.FILL_AND_STROKE
             clockHandPaint.color = if (drawAmbient) {
                 watchFaceColors.ambientPrimaryColor
             } else {
                 watchFaceColors.activePrimaryColor
             }
+
+//            canvas.drawCircle(bounds.exactCenterX(), bounds.exactCenterY(), 2f, clockHandPaint)
 
             // Draw hour hand.
             withRotation(hourRotation, bounds.exactCenterX(), bounds.exactCenterY()) {
@@ -361,7 +576,7 @@ class AnalogWatchCanvasRenderer(
      * drawClockHands() method.
      */
     private fun recalculateClockHands(bounds: Rect) {
-        Log.d(TAG, "recalculateClockHands()")
+        Logger.d(TAG, "recalculateClockHands()")
         hourHandBorder =
             createClockHand(
                 bounds,
@@ -457,7 +672,7 @@ class AnalogWatchCanvasRenderer(
         // Draws text hour indicators (12, 3, 6, and 9).
         val textBounds = Rect()
         textPaint.color = outerElementColor
-        for (i in 0 until 4) {
+        for (i in HOUR_MARKS.indices) {
             val rotation = 0.5f * (i + 1).toFloat() * Math.PI
             val dx = sin(rotation).toFloat() * numberRadiusFraction * bounds.width().toFloat()
             val dy = -cos(rotation).toFloat() * numberRadiusFraction * bounds.width().toFloat()
@@ -475,7 +690,7 @@ class AnalogWatchCanvasRenderer(
         outerElementPaint.color = outerElementColor
         canvas.save()
         for (i in 0 until 12) {
-            if (i % 3 != 0) {
+            if (i % 3 != 0 && i != 2) {
                 drawTopMiddleCircle(
                     canvas,
                     bounds,
@@ -513,7 +728,7 @@ class AnalogWatchCanvasRenderer(
         private const val TAG = "AnalogWatchCanvasRenderer"
 
         // Painted between pips on watch face for hour marks.
-        private val HOUR_MARKS = arrayOf("3", "6", "9", "12")
+        private val HOUR_MARKS = arrayOf("3", "6", "9")
 
         // Used to canvas.scale() to scale watch hands in proper bounds. This will always be 1.0.
         private const val WATCH_HAND_SCALE = 1.0f
