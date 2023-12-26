@@ -77,40 +77,6 @@ enum class ColorStyleIdAndResourceIds(
         backgroundColorId = R.color.ambient_background_color,
         outerElementColorId = R.color.ambient_outer_element_color
     ),
-
-    RED(
-        id = RED_COLOR_STYLE_ID,
-        nameResourceId = RED_COLOR_STYLE_NAME_RESOURCE_ID,
-        iconResourceId = RED_COLOR_STYLE_ICON_ID,
-        complicationStyleDrawableId = R.drawable.complication_red_style,
-        primaryColorId = R.color.red_primary_color,
-        secondaryColorId = R.color.red_secondary_color,
-        backgroundColorId = R.color.red_background_color,
-        outerElementColorId = R.color.red_outer_element_color
-    ),
-
-    GREEN(
-        id = GREEN_COLOR_STYLE_ID,
-        nameResourceId = GREEN_COLOR_STYLE_NAME_RESOURCE_ID,
-        iconResourceId = GREEN_COLOR_STYLE_ICON_ID,
-        complicationStyleDrawableId = R.drawable.complication_green_style,
-        primaryColorId = R.color.green_primary_color,
-        secondaryColorId = R.color.green_secondary_color,
-        backgroundColorId = R.color.green_background_color,
-        outerElementColorId = R.color.green_outer_element_color
-    ),
-
-    BLUE(
-        id = BLUE_COLOR_STYLE_ID,
-        nameResourceId = BLUE_COLOR_STYLE_NAME_RESOURCE_ID,
-        iconResourceId = BLUE_COLOR_STYLE_ICON_ID,
-        complicationStyleDrawableId = R.drawable.complication_blue_style,
-        primaryColorId = R.color.blue_primary_color,
-        secondaryColorId = R.color.blue_secondary_color,
-        backgroundColorId = R.color.blue_background_color,
-        outerElementColorId = R.color.blue_outer_element_color
-    ),
-
     WHITE(
         id = WHITE_COLOR_STYLE_ID,
         nameResourceId = WHITE_COLOR_STYLE_NAME_RESOURCE_ID,
@@ -129,9 +95,6 @@ enum class ColorStyleIdAndResourceIds(
         fun getColorStyleConfig(id: String): ColorStyleIdAndResourceIds {
             return when (id) {
                 AMBIENT.id -> AMBIENT
-                RED.id -> RED
-                GREEN.id -> GREEN
-                BLUE.id -> BLUE
                 WHITE.id -> WHITE
                 else -> WHITE
             }

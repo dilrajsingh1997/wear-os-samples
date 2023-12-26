@@ -48,10 +48,10 @@
     <color name="blue_outer_element_color">@color/light_blue</color>
 
     <!-- White Style -->
-    <color name="white_primary_color">@color/white_70</color>
-    <color name="white_secondary_color">@color/white_50</color>
-    <color name="white_background_color">@color/dark_gray</color>
-    <color name="white_outer_element_color">@color/white_70</color>
+    <color name="white_primary_color">@color/black</color>
+    <color name="white_secondary_color">@color/gray_70</color>
+    <color name="white_background_color">@color/white</color>
+    <color name="white_outer_element_color">@color/gray_50</color>
 
     <!-- custom colors. -->
     <color name="transparent">#00000000</color>

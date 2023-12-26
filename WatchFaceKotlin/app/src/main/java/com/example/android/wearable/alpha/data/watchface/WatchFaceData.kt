@@ -53,7 +53,7 @@ private const val BATTERY_SWEEP_ANGLE = 90f
  * Represents all data needed to render an analog watch face.
  */
 data class WatchFaceData(
-    val activeColorStyle: ColorStyleIdAndResourceIds = ColorStyleIdAndResourceIds.RED,
+    val activeColorStyle: ColorStyleIdAndResourceIds = ColorStyleIdAndResourceIds.AMBIENT,
     val ambientColorStyle: ColorStyleIdAndResourceIds = ColorStyleIdAndResourceIds.AMBIENT,
     val drawHourPips: Boolean = DRAW_HOUR_PIPS_DEFAULT,
     val hourHandDimensions: ArmDimensions = ArmDimensions(

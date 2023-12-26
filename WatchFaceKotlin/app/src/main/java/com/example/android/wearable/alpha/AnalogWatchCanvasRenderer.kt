@@ -247,6 +247,9 @@ class AnalogWatchCanvasRenderer(
                     newWatchFaceData = newWatchFaceData.copy(
                         activeColorStyle = ColorStyleIdAndResourceIds.getColorStyleConfig(
                             listOption.id.toString()
+                        ),
+                        ambientColorStyle = ColorStyleIdAndResourceIds.getColorStyleConfig(
+                            listOption.id.toString()
                         )
                     )
                 }
@@ -466,19 +469,14 @@ class AnalogWatchCanvasRenderer(
     // ----- All drawing functions -----
     private fun drawComplications(canvas: Canvas, zonedDateTime: ZonedDateTime) {
         for ((_, complication) in complicationSlotsManager.complicationSlots) {
-            if (complication.enabled) {
+            if (complication.enabled && renderParameters.drawMode in listOf(DrawMode.INTERACTIVE, DrawMode.LOW_BATTERY_INTERACTIVE)) {
 
                 ComplicationDrawable(context).apply {
                     activeStyle.run {
                         backgroundColor = watchFaceColors.activeBackgroundColor
                         textColor = watchFaceColors.activeSecondaryColor
                         textSize = 100
-                        iconColor = Color.TRANSPARENT
-                    }
-                    ambientStyle.run {
-                        backgroundColor = Color.TRANSPARENT
-                        textColor = Color.TRANSPARENT
-                        textSize = 0
+                        borderColor = Color.TRANSPARENT
                         iconColor = Color.TRANSPARENT
                     }
                     (complication.renderer as CanvasComplicationDrawable).drawable = this
