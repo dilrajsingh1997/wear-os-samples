@@ -94,5 +94,10 @@
     <color name="gray_white">#EEEEEE</color>
     <color name="dark_pink">#F50057</color>
     <color name="dark_blue">#1565C0</color>
+
+    <color name="indicator_red">#730606</color>
+    <color name="indicator_green">#036927</color>
+    <color name="indicator_yellow">#967005</color>
+
 </resources>
 

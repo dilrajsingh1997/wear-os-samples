@@ -65,7 +65,10 @@ enum class ColorStyleIdAndResourceIds(
     @ColorRes val primaryColorId: Int,
     @ColorRes val secondaryColorId: Int,
     @ColorRes val backgroundColorId: Int,
-    @ColorRes val outerElementColorId: Int
+    @ColorRes val outerElementColorId: Int,
+    @ColorRes val indicatorRed: Int = R.color.indicator_red,
+    @ColorRes val indicatorGreen: Int = R.color.indicator_green,
+    @ColorRes val indicatorYellow: Int = R.color.indicator_yellow,
 ) {
     AMBIENT(
         id = AMBIENT_COLOR_STYLE_ID,

@@ -25,6 +25,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
 import android.os.BatteryManager
+import android.os.SystemClock
 import android.provider.CalendarContract
 import android.view.SurfaceHolder
 import androidx.core.graphics.withRotation
@@ -47,6 +48,7 @@ import androidx.wear.watchface.style.UserStyle
 import androidx.wear.watchface.style.UserStyleSetting
 import androidx.wear.watchface.style.WatchFaceLayer
 import com.example.android.wearable.alpha.data.watchface.ColorStyleIdAndResourceIds
+import com.example.android.wearable.alpha.data.watchface.HeartRateRepository
 import com.example.android.wearable.alpha.data.watchface.WatchFaceColorPalette.Companion.convertToWatchFaceColorPalette
 import com.example.android.wearable.alpha.data.watchface.WatchFaceData
 import com.example.android.wearable.alpha.utils.COLOR_STYLE_SETTING
@@ -97,8 +99,6 @@ class AnalogWatchCanvasRenderer(
     private val scope: CoroutineScope =
         CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-    private var heartRate = 0.0
-
     private val complicationDrawable by lazy {
         ComplicationDrawable(context).apply {
             activeStyle.run {
@@ -110,40 +110,7 @@ class AnalogWatchCanvasRenderer(
         }
     }
 
-    private val passiveListenerConfig = PassiveListenerConfig.builder()
-        .setDataTypes(setOf(DataType.HEART_RATE_BPM))
-//        .setHealthEventTypes(setOf(HealthEvent.Type.FALL_DETECTED))
-        .build()
-
-    private val passiveListenerCallback: PassiveListenerCallback =
-        object : PassiveListenerCallback {
-            override fun onNewDataPointsReceived(dataPoints: DataPointContainer) {
-                Logger.d("debugdilrajhr", "data received passive callback " +
-                    dataPoints.intervalDataPoints.joinToString { it.value.toString() } +
-                    " " +
-                    dataPoints.getData(DataType.HEART_RATE_BPM)
-                        .joinToString { it.value.toString() })
-                runCatching {
-                    heartRate = dataPoints
-                        .getData(DataType.HEART_RATE_BPM)
-                        .last()
-                        .value
-                        .takeIf { it > 0 }
-                        ?: heartRate
-                }
-            }
-        }
-
-    private var passiveMonitoringClient: PassiveMonitoringClient
-
-    init {
-        val healthClient = HealthServices.getClient(context)
-        passiveMonitoringClient = healthClient.passiveMonitoringClient
-        passiveMonitoringClient.setPassiveListenerCallback(
-            passiveListenerConfig,
-            passiveListenerCallback
-        )
-    }
+    private val heartRateRepository = HeartRateRepository(context)
 
     // Represents all data needed to render the watch face. All value defaults are constants. Only
     // three values are changeable by the user (color scheme, ticks being rendered, and length of
@@ -312,7 +279,7 @@ class AnalogWatchCanvasRenderer(
     override fun onDestroy() {
         Logger.d(TAG, "onDestroy()")
         scope.cancel("AnalogWatchCanvasRenderer scope clear() request")
-        passiveMonitoringClient.clearPassiveListenerCallbackAsync()
+        heartRateRepository.onDestroy()
         super.onDestroy()
     }
 
@@ -446,7 +413,7 @@ class AnalogWatchCanvasRenderer(
     }
 
     private fun drawHeartRate(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime) {
-        val hr = heartRate.toInt().toString()
+        val hr = heartRateRepository.heartRate.toInt().toString()
 
         val rect = Rect()
         customDataElements.getTextBounds(hr, 0, hr.length, rect)
@@ -688,12 +655,35 @@ class AnalogWatchCanvasRenderer(
         outerElementPaint.color = outerElementColor
         canvas.save()
         for (i in 0 until 12) {
-            if (i % 3 != 0 && i != 2) {
+            outerElementPaint.color = outerElementColor
+            if (i % 3 != 0 && i !in INFORMATION_MARKS) {
                 drawTopMiddleCircle(
                     canvas,
                     bounds,
                     numberStyleOuterCircleRadiusFraction,
                     gapBetweenOuterCircleAndBorderFraction
+                )
+            }
+            if (i == 1) {
+                drawTopMiddleCircle(
+                    canvas,
+                    bounds,
+                    numberStyleOuterCircleRadiusFraction,
+                    gapBetweenOuterCircleAndBorderFraction,
+                    paint = outerElementPaint
+                        .apply {
+                            color = when (heartRateRepository.isRecentCallbackReceived) {
+                                true -> {
+                                    watchFaceColors.indicatorGreen
+                                }
+                                false -> {
+                                    watchFaceColors.indicatorRed
+                                }
+                                null -> {
+                                    watchFaceColors.indicatorYellow
+                                }
+                            }
+                        }
                 )
             }
             canvas.rotate(360.0f / 12.0f, bounds.exactCenterX(), bounds.exactCenterY())
@@ -706,9 +696,10 @@ class AnalogWatchCanvasRenderer(
         canvas: Canvas,
         bounds: Rect,
         radiusFraction: Float,
-        gapBetweenOuterCircleAndBorderFraction: Float
+        gapBetweenOuterCircleAndBorderFraction: Float,
+        paint: Paint = outerElementPaint,
     ) {
-        outerElementPaint.style = Paint.Style.FILL_AND_STROKE
+        paint.style = Paint.Style.FILL_AND_STROKE
 
         // X and Y coordinates of the center of the circle.
         val centerX = 0.5f * bounds.width().toFloat()
@@ -718,7 +709,7 @@ class AnalogWatchCanvasRenderer(
             centerX,
             centerY,
             radiusFraction * bounds.width(),
-            outerElementPaint
+            paint
         )
     }
 
@@ -727,6 +718,7 @@ class AnalogWatchCanvasRenderer(
 
         // Painted between pips on watch face for hour marks.
         private val HOUR_MARKS = arrayOf("3", "6", "9")
+        private val INFORMATION_MARKS = arrayOf(1, 2)
 
         // Used to canvas.scale() to scale watch hands in proper bounds. This will always be 1.0.
         private const val WATCH_HAND_SCALE = 1.0f

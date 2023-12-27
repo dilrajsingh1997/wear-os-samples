@@ -40,7 +40,10 @@ data class WatchFaceColorPalette(
     val ambientPrimaryColor: Int,
     val ambientSecondaryColor: Int,
     val ambientBackgroundColor: Int,
-    val ambientOuterElementColor: Int
+    val ambientOuterElementColor: Int,
+    val indicatorRed: Int,
+    val indicatorGreen: Int,
+    val indicatorYellow: Int,
 ) {
     companion object {
         /**
@@ -63,7 +66,10 @@ data class WatchFaceColorPalette(
                 ambientPrimaryColor = context.getColor(ambientColorStyle.primaryColorId),
                 ambientSecondaryColor = context.getColor(ambientColorStyle.secondaryColorId),
                 ambientBackgroundColor = context.getColor(ambientColorStyle.backgroundColorId),
-                ambientOuterElementColor = context.getColor(ambientColorStyle.outerElementColorId)
+                ambientOuterElementColor = context.getColor(ambientColorStyle.outerElementColorId),
+                indicatorGreen = context.getColor(activeColorStyle.indicatorGreen),
+                indicatorRed = context.getColor(activeColorStyle.indicatorRed),
+                indicatorYellow = context.getColor(activeColorStyle.indicatorYellow),
             )
         }
     }
