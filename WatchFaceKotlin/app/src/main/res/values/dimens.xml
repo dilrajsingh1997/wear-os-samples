@@ -20,7 +20,7 @@
     <dimen name="clock_hand_stroke_width">2dp</dimen>
 
     <dimen name="heart_rate_top_margin">16dp</dimen>
-    <dimen name="date_right_margin">16dp</dimen>
+    <dimen name="date_right_margin">4dp</dimen>
     <dimen name="battery_radius">42dp</dimen>
 
     <!-- Values for WatchFaceConfigActivity -->

@@ -55,6 +55,7 @@ import com.example.android.wearable.alpha.utils.COLOR_STYLE_SETTING
 import com.example.android.wearable.alpha.utils.DRAW_HOUR_PIPS_STYLE_SETTING
 import com.example.android.wearable.alpha.utils.Logger
 import com.example.android.wearable.alpha.utils.WATCH_HAND_LENGTH_STYLE_SETTING
+import java.time.DayOfWeek
 import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.Calendar
@@ -319,6 +320,7 @@ class AnalogWatchCanvasRenderer(
             drawClockHands(canvas, bounds, zonedDateTime)
             drawHeartRate(canvas, bounds, zonedDateTime)
             drawDate(canvas, bounds, zonedDateTime)
+            drawDay(canvas, bounds, zonedDateTime)
         }
 
         if (renderParameters.drawMode != DrawMode.AMBIENT &&
@@ -393,7 +395,7 @@ class AnalogWatchCanvasRenderer(
         val rect = Rect()
         customDataElements.getTextBounds(date, 0, date.length, rect)
 
-        val x = bounds.exactCenterX() + canvas.width / 2f - dateRightMargin
+        val x = bounds.exactCenterX() + canvas.width / 2f - rect.width() - dateRightMargin
         val y = canvas.height / 2f + rect.height() / 2f - rect.bottom
 
         customDataElements.color = if (renderParameters.drawMode == DrawMode.AMBIENT) {
@@ -403,6 +405,36 @@ class AnalogWatchCanvasRenderer(
         }
 
         canvas.withRotation(-30f, bounds.exactCenterX(), bounds.exactCenterY()) {
+            canvas.drawText(
+                date,
+                x,
+                y,
+                customDataElements,
+            )
+        }
+    }
+
+    private fun drawDay(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime) {
+        val date = when (zonedDateTime.dayOfWeek) {
+            DayOfWeek.MONDAY -> "M"
+            DayOfWeek.TUESDAY -> "Tu"
+            DayOfWeek.WEDNESDAY -> "W"
+            DayOfWeek.THURSDAY -> "Th"
+            DayOfWeek.FRIDAY -> "F"
+            DayOfWeek.SATURDAY -> "Sa"
+            DayOfWeek.SUNDAY -> "Su"
+        }
+
+        val rect = Rect()
+        customDataElements.getTextBounds(date, 0, date.length, rect)
+        val x = bounds.exactCenterX() - canvas.width / 2f + dateRightMargin
+        val y = canvas.height / 2f + rect.height() / 2f - rect.bottom
+        customDataElements.color = if (renderParameters.drawMode == DrawMode.AMBIENT) {
+            watchFaceColors.ambientSecondaryColor
+        } else {
+            watchFaceColors.activePrimaryColor
+        }
+        canvas.withRotation(30f, bounds.exactCenterX(), bounds.exactCenterY()) {
             canvas.drawText(
                 date,
                 x,
@@ -718,7 +750,7 @@ class AnalogWatchCanvasRenderer(
 
         // Painted between pips on watch face for hour marks.
         private val HOUR_MARKS = arrayOf("3", "6", "9")
-        private val INFORMATION_MARKS = arrayOf(1, 2)
+        private val INFORMATION_MARKS = arrayOf(1, 2, 10)
 
         // Used to canvas.scale() to scale watch hands in proper bounds. This will always be 1.0.
         private const val WATCH_HAND_SCALE = 1.0f
