@@ -40,6 +40,7 @@ import androidx.wear.watchface.ComplicationSlotsManager
 import androidx.wear.watchface.DrawMode
 import androidx.wear.watchface.Renderer
 import androidx.wear.watchface.WatchState
+import androidx.wear.watchface.complications.data.ComplicationExperimental
 import androidx.wear.watchface.complications.data.ShortTextComplicationData
 import androidx.wear.watchface.complications.rendering.CanvasComplicationDrawable
 import androidx.wear.watchface.complications.rendering.ComplicationDrawable
@@ -466,6 +467,7 @@ class AnalogWatchCanvasRenderer(
     }
 
     // ----- All drawing functions -----
+    @OptIn(ComplicationExperimental::class)
     private fun drawComplications(canvas: Canvas, zonedDateTime: ZonedDateTime) {
         for ((_, complication) in complicationSlotsManager.complicationSlots) {
             if (complication.enabled && renderParameters.drawMode in listOf(DrawMode.INTERACTIVE, DrawMode.LOW_BATTERY_INTERACTIVE)) {
@@ -480,6 +482,7 @@ class AnalogWatchCanvasRenderer(
                     }
                     (complication.renderer as CanvasComplicationDrawable).drawable = this
                 }
+                Logger.d("debugdilraj", "${complication.boundsType} -- ${complication.complicationData.value} -- ${complication.boundingArc} -- ${complication.complicationSlotBounds} -- ")
 
 
                 complication.render(canvas, zonedDateTime, renderParameters)

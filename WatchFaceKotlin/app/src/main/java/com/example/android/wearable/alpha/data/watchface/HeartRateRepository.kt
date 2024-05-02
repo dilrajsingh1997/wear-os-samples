@@ -13,7 +13,7 @@ import com.example.android.wearable.alpha.utils.Logger
 class HeartRateRepository(
     context: Context
 ) {
-    var lastCallbackTime: Long? = -1L
+    private var lastCallbackTime: Long? = -1L
 
     val isRecentCallbackReceived: Boolean?
         get() = lastCallbackTime?.let { (SystemClock.elapsedRealtime() - it) < 2_000L }
