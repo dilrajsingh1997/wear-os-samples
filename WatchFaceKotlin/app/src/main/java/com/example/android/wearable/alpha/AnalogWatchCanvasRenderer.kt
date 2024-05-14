@@ -58,9 +58,11 @@ import com.example.android.wearable.alpha.utils.Logger
 import com.example.android.wearable.alpha.utils.WATCH_HAND_LENGTH_STYLE_SETTING
 import java.time.DayOfWeek
 import java.time.Duration
+import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.Calendar
 import kotlin.math.cos
+import kotlin.math.min
 import kotlin.math.sin
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -328,6 +330,7 @@ class AnalogWatchCanvasRenderer(
             renderParameters.watchFaceLayers.contains(WatchFaceLayer.BASE)
         ) {
             drawBattery(canvas, bounds)
+            drawPSTTime(canvas, bounds, zonedDateTime)
 
             if (watchFaceData.drawHourPips) {
                 drawNumberStyleOuterElement(
@@ -410,6 +413,55 @@ class AnalogWatchCanvasRenderer(
                 date,
                 x,
                 y,
+                customDataElements,
+            )
+        }
+    }
+
+    private fun drawPSTTime(canvas: Canvas, bounds: Rect, zonedDateTimeLocal: ZonedDateTime) {
+        val zonedDateTime = zonedDateTimeLocal.withZoneSameInstant(ZoneId.of("PST"))
+        val hour = zonedDateTime.hour.toString()
+
+        val rect = Rect()
+        customDataElements.getTextBounds(hour, 0, hour.length, rect)
+
+        val x = canvas.width / 2f + rect.width() / 2f - rect.right
+        val y = bounds.exactCenterY() + canvas.height / 2f - rect.height()
+
+        customDataElements.color = if (renderParameters.drawMode == DrawMode.AMBIENT) {
+            watchFaceColors.ambientSecondaryColor
+        } else {
+            watchFaceColors.activePrimaryColor
+        }
+
+        canvas.withRotation(30f, bounds.exactCenterX(), bounds.exactCenterY()) {
+            canvas.drawText(
+                hour,
+                x,
+                y,
+                customDataElements,
+            )
+        }
+
+        val minute = zonedDateTime.minute.toString()
+
+        val rectMinute = Rect()
+        customDataElements.getTextBounds(minute, 0, minute.length, rectMinute)
+
+        val xMinute = canvas.width / 2f + rectMinute.width() / 2f - rectMinute.right
+        val yMinute = bounds.exactCenterY() + canvas.height / 2f - rectMinute.height()
+
+        customDataElements.color = if (renderParameters.drawMode == DrawMode.AMBIENT) {
+            watchFaceColors.ambientSecondaryColor
+        } else {
+            watchFaceColors.activePrimaryColor
+        }
+
+        canvas.withRotation(-30f, bounds.exactCenterX(), bounds.exactCenterY()) {
+            canvas.drawText(
+                minute,
+                xMinute,
+                yMinute,
                 customDataElements,
             )
         }
